@@ -1,0 +1,118 @@
+# Importar librerías
+from bs4 import BeautifulSoup
+import requests
+
+def main(URL):
+    # Abriendo nuestro archivo de salida en modo de añadir (append)
+    # Esto creará el archivo si no existe, o añadirá al final si ya existe.
+    File = open("out.csv", "a")
+
+    # Especificando el User-Agent. Puedes usar otros User-Agents
+    # disponibles en internet para simular diferentes navegadores.
+    HEADERS = ({'User-Agent':
+                'Mozilla/5.0 (X11; Linux x86_64) \
+                    AppleWebKit/537.36 (KHTML, like Gecko) \
+                        Chrome/44.0.2403.157 Safari/537.36',
+                'Accept-Language': 'es-ES, es;q=0.5'}) # Cambiado a español para preferencias
+
+    # Realizando la petición HTTP a la URL
+    webpage = requests.get(URL, headers=HEADERS)
+
+    # Creando el objeto BeautifulSoup que contiene todos los datos.
+    # Usamos "lxml" como parser, que es rápido y eficiente.
+    soup = BeautifulSoup(webpage.content, "lxml")
+
+    # Recuperando el título del producto
+    try:
+        # Objeto de etiqueta externa
+        title = soup.find("span", 
+                          attrs={"id": 'productTitle'})
+
+        # Objeto NavigableString interno (el texto dentro de la etiqueta)
+        title_value = title.string
+
+        # Título como un valor de cadena limpio (eliminando espacios extra y comas)
+        title_string = title_value.strip().replace(',', '')
+
+    except AttributeError:
+        # Si no se encuentra el título, se establece como "NA" (No Disponible)
+        title_string = "NA"
+    print("Título del producto = ", title_string)
+
+    # Guardando el título en el archivo CSV
+    File.write(f"{title_string},")
+
+    # Recuperando el precio del producto
+    try:
+        price = soup.find(
+            "span", attrs={'id': 'priceblock_ourprice'}) \
+                                .string.strip().replace(',', '')
+        # Estamos omitiendo espacios innecesarios
+        # y comas de nuestra cadena para limpiar el dato.
+    except AttributeError:
+        # Si no se encuentra el precio, se establece como "NA"
+        price = "NA"
+    print("Precio del producto = ", price)
+
+    # Guardando el precio en el archivo CSV
+    File.write(f"{price},")
+
+    # Recuperando la calificación del producto
+    try:
+        rating = soup.find("i", attrs={
+                            'class': 'a-icon a-icon-star a-star-4-5'}) \
+                                .string.strip().replace(',', '')
+
+    except AttributeError:
+        # Si la calificación inicial no se encuentra, intenta con otra clase
+        try:
+            rating = soup.find(
+                "span", attrs={'class': 'a-icon-alt'}) \
+                                .string.strip().replace(',', '')
+        except:
+            # Si ninguna de las anteriores funciona, se establece como "NA"
+            rating = "NA"
+    print("Calificación general = ", rating)
+
+    # Guardando la calificación en el archivo CSV
+    File.write(f"{rating},")
+
+    # Recuperando el número de reseñas
+    try:
+        review_count = soup.find(
+            "span", attrs={'id': 'acrCustomerReviewText'}) \
+                                .string.strip().replace(',', '')
+
+    except AttributeError:
+        # Si el número de reseñas no se encuentra, se establece como "NA"
+        review_count = "NA"
+    print("Total de reseñas = ", review_count)
+    # Guardando el número de reseñas en el archivo CSV
+    File.write(f"{review_count},")
+
+    # Imprimiendo el estado de disponibilidad del producto
+    try:
+        available = soup.find("div", attrs={'id': 'availability'})
+        available = available.find("span") \
+                            .string.strip().replace(',', '')
+
+    except AttributeError:
+        # Si la disponibilidad no se encuentra, se establece como "NA"
+        available = "NA"
+    print("Disponibilidad = ", available)
+
+    # Guardando la disponibilidad y cerrando la línea en el archivo CSV
+    File.write(f"{available},\n")
+
+    # Cerrando el archivo
+    File.close()
+
+
+if __name__ == '__main__':
+    # Abriendo nuestro archivo de URLs para acceder a ellas
+    file = open("url.txt", "r")
+
+    # Iterando sobre cada URL en el archivo
+    for links in file.readlines():
+        # Llamando a la función principal para procesar cada URL
+        main(links)
